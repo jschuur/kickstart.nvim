@@ -57,7 +57,7 @@ require('lazy').setup({
 
   {
     'akinsho/bufferline.nvim',
-    tag = 'v3.*',
+    -- tag = 'v3.*',
     dependencies = 'nvim-tree/nvim-web-devicons',
     config = function()
       require('bufferline').setup {
@@ -126,11 +126,68 @@ require('lazy').setup({
     end,
   },
 
+  -- Auto-save: https://github.com/Pocco81/auto-save.nvim
+  {
+    'pocco81/auto-save.nvim',
+    config = function()
+      require('auto-save').setup {}
+    end,
+  },
+
   -- Intelligently opem files in the last place you left them: https://github.com/ethanholz/nvim-lastplace
   {
     'ethanholz/nvim-lastplace',
     config = function()
       require('nvim-lastplace').setup {}
+    end,
+  },
+
+  -- Pop-up/notify UI: https://github.com/folke/noice.nvim
+  {
+    'folke/noice.nvim',
+    config = function()
+      require('noice').setup {
+        lsp = {
+          -- override markdown rendering so that **cmp** and other plugins use **Treesitter**
+          override = {
+            ['vim.lsp.util.convert_input_to_markdown_lines'] = true,
+            ['vim.lsp.util.stylize_markdown'] = true,
+            ['cmp.entry.get_documentation'] = true,
+          },
+        },
+        presets = {
+          -- bottom_search = true, -- use a classic bottom cmdline for search
+          command_palette = true, -- position the cmdline and popupmenu together
+          long_message_to_split = true, -- long messages will be sent to a split
+          inc_rename = false, -- enables an input dialog for inc-rename.nvim
+          lsp_doc_border = false, -- add a border to hover docs and signature help
+        },
+        routes = {
+          {
+            filter = { event = 'msg_show', find = 'AutoSave: saved at' },
+            opts = { skip = true },
+          },
+        },
+      }
+    end,
+    dependencies = {
+      'MunifTanjim/nui.nvim',
+      'rcarriga/nvim-notify',
+    },
+  },
+
+  {
+    'axelvc/template-string.nvim',
+    config = function()
+      require('template-string').setup {
+        filetypes = { 'typescript', 'javascript', 'typescriptreact', 'javascriptreact', 'python' },
+        jsx_brackets = true,
+        remove_template_string = false,
+        restore_quotes = {
+          normal = [[']],
+          jsx = [["]],
+        },
+      }
     end,
   },
 
@@ -208,8 +265,21 @@ require('lazy').setup({
     dependencies = { 'hrsh7th/cmp-nvim-lsp', 'L3MON4D3/LuaSnip', 'saadparwaiz1/cmp_luasnip' },
   },
 
-  'hrsh7th/cmp-buffer', -- complete from known words
+  'hrsh7th/cmp-buffer', -- complete from known
   'hrsh7th/cmp-path', -- complete from paths
+  {
+    'hrsh7th/cmp-cmdline', -- completions for search from current buffer
+    config = function()
+      local cmp = require 'cmp'
+
+      cmp.setup.cmdline('/', {
+        mapping = cmp.mapping.preset.cmdline(),
+        sources = {
+          { name = 'buffer' },
+        },
+      })
+    end,
+  },
 
   -- Show contextual keybindings: https://github.com/folke/which-key.nvim
   {
@@ -245,6 +315,12 @@ require('lazy').setup({
         theme = 'catppuccin',
         component_separators = '|',
         section_separators = '',
+      },
+      sections = {
+        lualine_b = { 'branch', 'diagnostics' },
+        lualine_c = { { 'filename', path = 1 } },
+        lualine_x = { 'filetype' },
+        lualine_y = {},
       },
     },
   },
@@ -291,6 +367,9 @@ require('lazy').setup({
     'numToStr/Comment.nvim',
     opts = {},
   },
+
+  'MattesGroeger/vim-bookmarks',
+  'tom-anders/telescope-vim-bookmarks.nvim',
 
   -- Fuzzy Finder: https://github.com/nvim-telescope/telescope.nvim
   {
@@ -399,7 +478,7 @@ vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { de
 -- See `:help nvim-treesitter`
 require('nvim-treesitter.configs').setup {
   -- Add languages to be installed here that you want installed for treesitter
-  ensure_installed = { 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'tsx', 'typescript', 'help', 'vim' },
+  ensure_installed = { 'go', 'lua', 'python', 'rust', 'tsx', 'typescript', 'help', 'vim' },
 
   -- Autoinstall languages that are not installed. Defaults to false (but you can change for yourself!)
   auto_install = false,
@@ -525,10 +604,6 @@ local on_attach = function(_, bufnr)
 end
 
 -- Enable the following language servers
---  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
---
---  Add any additional override configuration in the following tables. They will be passed to
---  the `settings` field of the server config. You must look up that documentation yourself.
 local servers = {
   -- clangd = {},
   -- gopls = {},
@@ -539,6 +614,9 @@ local servers = {
     Lua = {
       workspace = { checkThirdParty = false },
       telemetry = { enable = false },
+      window = {
+        progressBar = false,
+      },
     },
   },
 }
@@ -616,7 +694,7 @@ cmp.setup {
     end, { 'i', 's' }),
   },
   sources = {
-    { name = 'nvim_lsp' },
+    { name = 'nvim_lsp', keyword_length = 3 },
     { name = 'luasnip' },
   },
 }
